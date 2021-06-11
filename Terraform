@@ -1,0 +1,7 @@
+#This file is intended to be of overall information of Terraform
+and its capabilities
+Overall Terraform is a tool to Define our Infrastructure as Code (IAC)
+
+-Supports different platforms
+
+-By using it, you can easily create many environments through Google Cloud, Microsoft Azure, AWS and etc.
