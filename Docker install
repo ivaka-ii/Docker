@@ -1,0 +1,22 @@
+https://docs.docker.com/engine/install/ubuntu/
+
+======================
+Docker engine install
+======================
+First uninstall all the docker engine old versions
+
+
+Install using repository
+------------------------
+sudo apt-get update
+
+======================
+Docker compose install
+======================
+https://docs.docker.com/compose/install/
+
+======================
+AWS vault install
+======================
+https://github.com/99designs/aws-vault
+
