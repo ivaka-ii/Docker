@@ -1,3 +1,14 @@
+======================
+Docker useful information
+======================
+Base image    -- Image that Docker starts with -- and we build on top of -- in order to create our application.
+Best practice   -- docker is running as a least-privileged user.
+
+Alpine (NGINX image)
+- Most light-weight version of NGINX image
+- Linux operating systems designed for Docker containers
+- No unnecessary packages, allows you to add things specific to your application
+
 https://docs.docker.com/engine/install/ubuntu/
 
 ======================
