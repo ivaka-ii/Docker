@@ -4,6 +4,10 @@ Docker useful information
 Base image    -- Image that Docker starts with -- and we build on top of -- in order to create our application.
 Best practice   -- docker is running as a least-privileged user.
 
+======================
+NGINX docker image file
+======================
+https://hub.docker.com/r/nginxinc/nginx-unprivileged
 Alpine (NGINX image)
 - Most light-weight version of NGINX image
 - Linux operating systems designed for Docker containers
