@@ -4,6 +4,11 @@ Docker useful information
 Base image    -- Image that Docker starts with -- and we build on top of -- in order to create our application.
 Best practice   -- docker is running as a least-privileged user.
 
+You can group jobs into different stages (Build and Push)
+Artefacts in docker image : A way to pass files from one job to the next
+Release - release is going to be done any time we create a release tag for our project
+
+
 ======================
 NGINX docker image file
 ======================
