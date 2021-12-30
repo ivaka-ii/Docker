@@ -1,0 +1,36 @@
+Kubernetes architectures
+========================================
+
+Core concepts
+========================================
+Worker Nodes		-- host application as containers
+Master Node			-- Manage, plan, schedule monitor nodes 
+
+Master node contains control plane components
+
+All information from control plane is stored in ETCD cluster
+
+Kube scheduler 		-- represents the docker uploader to the different working nodes based on it's size and capabilities
+
+Kubernettes Controller Manager
+	Node-controller 	-- it is responsible for the nodes itself
+	Replication-controller	-- it is responsible for how many replica's is needed on demand and running
+	
+Kube-apiserver		-- the component that connects all the kubernetes components into one
+					it gives the users API calls to the components withtin the architecture
+
+Within Kubernetes everything should be container based or compatible, so in this manner we need 
+docker container runtime engine (docker or rkt container)
+
+Kubelet is listening for instructions from the kube api-server
+!It is also giving timely reports on the health and conditions of the worker nodes
+
+Kube-proxy 		-- service that ensures the reachability withtin the different working nodes components
+
+ETCD
+------------------------------------------
+ETCD is a distributed key-value store that is Simple, Secure & Fast
+
+key-value database has only two colums, consist of key and value 
+!You cannot have duplicate keys as such.
+Used to store small chunks of data for read/write for reading configuration and etc.
