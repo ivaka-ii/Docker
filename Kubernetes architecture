@@ -1,4 +1,5 @@
-Kubernetes architectures
+========================================
+=Kubernetes architectures			   =
 ========================================
 
 Core concepts
@@ -10,20 +11,28 @@ Master node contains control plane components
 
 All information from control plane is stored in ETCD cluster
 
-Kube scheduler 		-- represents the docker uploader to the different working nodes based on it's size and capabilities
-
 Kubernettes Controller Manager
+---------------------------------------
+It can be downloaded and run as a service
+
 	Node-controller 	-- it is responsible for the nodes itself
-	Replication-controller	-- it is responsible for how many replica's is needed on demand and running
+		 checks the nodes stattus every 5 seconds through the kube-apiserver
+	!If it didn't get the response from the node, it states it "unreachable", but it waits 40 seconds before MARKING it as "unreachable"
+	!After 5 minutes unreachable node is persistent - it deletes it and replace it with new one
+	
+Main 2 activities:
+	1. Continiously on a lookout of the "ships" 	-- continiously monitor the state of various components
+	2. Work towards bringing the whole system to the desired functioning state 
+
+There are different other controlers, which is installed once you install the K8s controller manager.
+When installed  all the controlers are available, but their settings(time & etc.) are default.
+If SOME of your controllers don't work, this is a good starting point to look at.
 	
 Kube-apiserver		-- the component that connects all the kubernetes components into one
 					it gives the users API calls to the components withtin the architecture
 
 Within Kubernetes everything should be container based or compatible, so in this manner we need 
 docker container runtime engine (docker or rkt container)
-
-Kubelet is listening for instructions from the kube api-server
-!It is also giving timely reports on the health and conditions of the worker nodes
 
 Kube-proxy 		-- service that ensures the reachability withtin the different working nodes components
 
@@ -34,3 +43,74 @@ ETCD is a distributed key-value store that is Simple, Secure & Fast
 key-value database has only two colums, consist of key and value 
 !You cannot have duplicate keys as such.
 Used to store small chunks of data for read/write for reading configuration and etc.
+
+Kube scheduler
+---------------------------------------
+Kube scheduler 		-- represents the docker uploader to the different working nodes based on it's size and capabilities
+Responsible for scheduling pods on nodes 
+The scheduler is ONLY responsible for deciding which pod goes on which node. It doesn't ACTUALLY PLACE pod on the nodes(that is a job for the kubelet)
+
+Kube Scheduler finds the best fit for the pods to be placed over all the nodes.
+Actually what it is doing is:
+	1. Filter nodes 		-- it excludes node with smaller resources that won't fit to the needing resources of the pod
+	2. Rank nodes			-- it chooses which node will be better to be chosen to be placed over (the much resources, the better)
+	
+We should download the kube shceduler and run it as a service
+
+Kubelet
+---------------------------------------
+Kubelet is listening for instructions from the kube api-server
+!It is also giving timely reports on the health and conditions of the worker nodes
+This is the "captain" of the node and it waits the instructions.
+
+The kubelet registers what has to be pulled out through the kube-apiserver and the kube-scheduler.
+then it is pulling the required image and runs the instance. 
+!If you use kubeadm tool to deploy  your cluster, it does not automatically deploy the kubelet
+! You MUST ALWAYS INSTALL the kubelet on your worker nodes:
+	1. Download the installer
+	2. Extract it
+	3. Run it as a service
+	
+Kube-proxy
+---------------------------------------
+Service that ensures the reachability withtin the different working nodes components
+It gives the network availability of evry POD to connect to every POD
+!A POD can't have exactly the same IP always, so we can register the service with its own IP, so it can be connected
+!The service IP is not a real component, it is only living withing the kubernetes memory
+
+Kube-Proxy is a service that runs on each node in the kubernetes cluster
+Main job is to search for new services and each time new service is created, it creates the appropriate rule to connect to the service
+It is using IP TABLES rules, so it creates IPtable rules within each node to connect to the node that is running the requested service
+
+
+Kubernetes POD
+---------------------------------------
+We will assume that:
+1. The docker image is build and registered with docker, so kubernetes cluster can download it.
+2. The Kubernetes cluster has been setted up and working
+
+POD		-- Single instance of an application 
+POD is the smallest thing you can create in Kubernetes
+
+To scale up - we create new PODs, to scale down - delete the POD. If a Node has insufficient resources for POD, we can always deploy new Node.
+!You do not add additional containers to an existing POD to scale your application 
+!You CAN have different containers within ONE POD, except they do not multiply (ex. helper containers),
+	the two containers can communicate to each other as localhost, since they share the same network and storage space
+	
+You have to take note of interconnecting apps within a cluster (PODs, volumes, namespaces)
+APP			Helper 			Volume
+
+Python1		App1			Vol1
+Python2		App2			Vol2
+
+
+Replication-controller
+---------------------------------------------------------
+it is responsible for how many replica's is needed on demand and running
+Replication controler helps running more pods on single node to have high availability
+!replication controler CAN even help when there is only ONE pod on the node
+
+Replication controller is responsible for Load Balancing & scaling.
+There are 2 meaning here replication controler & replica set
+
+We should always label our replicaset file as this will show us which part of the pods should be replaced
