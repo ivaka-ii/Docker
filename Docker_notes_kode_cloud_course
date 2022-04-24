@@ -1,0 +1,117 @@
+====================================
+BASIC DOCKER IMAGE RUN -- BEGINERS
+====================================
+basic Docker commands
+------------------------------------
+docker run 		-- starts a container image on the disk
+				if it is not downloaded, it will donload it the first time
+!Ex: docker run nginx
+docker run [image]		-- this will run the docker container in foreend and stays attached to the docker, shows the version of the image
+docker run [image:version]		-- runs exact version of an image, (default tag is latest)
+!in docker hub there will be shown full or quick taag
+
+docker run -d [image] 	-- this runs the docker image in the background and remain in the workstation console
+If we want to go back to the docker we can run:
+docker attach [name of image/ firs identical symbols of the docker running image]
+
+docker run -i [image]	-- runs the container image in interactive mode
+docker run -it [image]	-- rnus the container in interactive mode and attached to Terminal
+
+docker run -p 80:5000 [image]	--maps the docker's port to the default browser http port
+!you can run as many docker images to different ports running
+Ex. (80:5000; 8000:5000, 3306:3306 and etc.) 
+
+!if database itself is attached to docker, whenever docker is destroyed, the db will also be destroyed
+!In that case you can attach a directory to the docker hot directory,
+which is attached to docker and containing the db
+docker run -v [docker host's dir:docker's directory] mysql		-- maps directory from host to the docker
+Ex.: docker run -v /opt/datadir:var/lib/mysql mysql
+
+!docker run jenkins/jenkins 	-- runs updated image for jenkins
+docker inspect [docker ID/container name]		-- show specific details of docker running container
+docker logs [docker ID/container name]		-- shows logs of the docker container running
+
+docker ps		-- lists all running containers and some basic information about them, container ID and the name of the image that's run on the container
+!each docker container gets random ID
+docker ps -a  	-- list all runned containers
+
+docker stop [container ID/container's name]		-- stops current docker
+
+docker rm [container ID/container's name]		-- removes container from workstation
+
+docker images 		-- list all present images on the workstation
+
+docker rmi 		-- remove a dtocker image from workstation
+!Ensure that no docker is running that image and then remove it
+docker pull [image] 	-- downloads image to workstation
+
+!Containers are not ment to host an OS, but a running task such as
+application server, database, computation or analysis task
+Container lives once the process in the container stays alive
+
+docker exec [docker's name] [command] [flags] [subcommand]
+Ex.! docker exec distracted_mclintock cat /etc/hosts
+
+docker attach [container ID/container's name]		-- attach to the terminal of the docker
+docker images are available at docker-hub
+
+Docker images
+-------------------------------
+How to create own docker image:
+1. Choose OS 
+2. Update apt repo
+3. Install dependencies using apt
+4. Install Python dependencies using pip
+5. Copy source code to /opt folder
+6. Run the web server using "flask" cmd
+
+1. In Dockerfile:
+FROM Ubuntu
+
+RUN apt-get update
+RUN app-get install python
+
+RUN pip install flask
+RUN pip install flask-mysql
+
+COPY . /opt/source-code
+
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask run
+
+2. Create a docker image with the following cmd
+
+docker build . -t [tag for the docker image] 		--buids image for app locally
+!If we want to push the docker to the public repo, we should tag it with our account name in front
+docker build . -t [account name]/[tag for the docker image		
+docker login 		-- to access your account from terminal, then you can push images
+docker push [account name/docker image] 	-- pushes locally created image to your docker account image registry
+
+Docker images has layered architecture
+!if there is a change in code in some layer or there is an error
+the layers from above are cached locally and it is not needed to be updated, only the layer
+that gets error or it is updated and below it, it will be changed and downloaded
+
+Docker environments 
+you can attach a variable values into your docker container image with:
+os.environ.get('VARIABLE_NAME')
+then you can invoke it with:
+docker run -e VARIABLE_NAME=name [container image]
+to deploy multiple containers with different values you must type different variables with the docker
+you can check the Environments with the 
+docker inspect command
+
+
+Commands vs Entrypoint
+------------------------------
+FROM Ubuntu					FROM Ubuntu
+							
+CMD ["sleep", "5"]			ENTRYPOINT ["sleep"]
+
+							CMD ["5"]
+
+Entrypoint is always modified within the docker image,
+as you can just pass the cmd whether it is different (5, 10, 15)
+
+If we want to change the entrypoint:
+docker run --entrypoint [ENTRYPOINT]v2.0 [docker image] [CMD]		-- this will append new command toward the entrypoint
+ex. docker run --entrypoint sleep2.0 ubuntu-sleeper 10
