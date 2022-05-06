@@ -1,4 +1,4 @@
-====================================
+===================================
 BASIC DOCKER IMAGE RUN -- BEGINERS
 ====================================
 basic Docker commands
@@ -17,7 +17,7 @@ docker attach [name of image/ firs identical symbols of the docker running image
 docker run -i [image]	-- runs the container image in interactive mode
 docker run -it [image]	-- rnus the container in interactive mode and attached to Terminal
 
-docker run -p 80:5000 [image]	--maps the docker's port to the default browser http port
+docker run -p [host port:docker port] [image]	--maps the docker's port to the default browser http port
 !you can run as many docker images to different ports running
 Ex. (80:5000; 8000:5000, 3306:3306 and etc.) 
 
@@ -41,7 +41,10 @@ docker rm [container ID/container's name]		-- removes container from workstation
 
 docker images 		-- list all present images on the workstation
 
-docker rmi 		-- remove a dtocker image from workstation
+docker rmi 		-- remove a docker image from workstation
+
+docker image prune -a		-- removes all images from Docker locally
+
 !Ensure that no docker is running that image and then remove it
 docker pull [image] 	-- downloads image to workstation
 
@@ -86,6 +89,8 @@ docker build . -t [account name]/[tag for the docker image
 docker login 		-- to access your account from terminal, then you can push images
 docker push [account name/docker image] 	-- pushes locally created image to your docker account image registry
 
+docker tag [image ID] [image name:tag to image]
+
 Docker images has layered architecture
 !if there is a change in code in some layer or there is an error
 the layers from above are cached locally and it is not needed to be updated, only the layer
@@ -99,6 +104,8 @@ docker run -e VARIABLE_NAME=name [container image]
 to deploy multiple containers with different values you must type different variables with the docker
 you can check the Environments with the 
 docker inspect command
+
+docker run python:3.6 cat /etc/*release*	-- gets the running OS information on the docker container python:3.6
 
 
 Commands vs Entrypoint
@@ -114,4 +121,229 @@ as you can just pass the cmd whether it is different (5, 10, 15)
 
 If we want to change the entrypoint:
 docker run --entrypoint [ENTRYPOINT]v2.0 [docker image] [CMD]		-- this will append new command toward the entrypoint
+ex. docker run --entrypoint sleep2.0 ubuntu-sleeper 10
+	docker run -p 38282:8080 --name [docker container name] -e APP_COLOR=blue -d kodekloud/simple- webapp
+
+-e,--env list					-- Set environment variables
+-d, --detach                    -- Run container in background and print container ID
+
+docker database with root password setup:
+docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:tag
+
+Docker Compose
+------------------------------
+
+Useful links
+https://docs.docker.com/compose/
+https://docs.docker.com/engine/reference/commandline/compose/
+
+If we run different docker instances on a host, then if we want to have interconnected networking services,
+we should put a link in the docker running container
+
+Voting application 
+Ex.
+docker run -d --name=redis redis		-- this creates in-memory DB
+docker run -d --name=db postgres:9.4	-- this runs container with PostgreSQL
+docker run -d --name=vote -p 5000:80 --link redis:redis voting app 		
+		-- runs docker container linked to redis Inmemory DB and exposes port 5000 on host, name voting app
+docker run -d --name=result -p 5001:80 --link db:db result-app
+		-- runs docker container linked to the PostgreSQL, exposes port 5001 on host and name is result-app
+docker run -d --name=worker --link db:db --link redis:redis worker
+		-- runs docker container worker, which processes data from redis to db, name worker
+
+these settings can be included in docker-compose.yml:
+	redis:
+		image: redis
+	db:
+		image: postgres:9.4
+	vote:
+		image: voting-app		![or build]:./vote 		-- we can specify path from where we can build our app if it's not on docker registry
+		ports:
+			- 5000:80
+		links:
+			- redis
+	result:
+		image: result-app		[or build]:./result
+		ports:
+			- 5001:80
+		links:
+			-db
+	worker:
+		image: worker			[or build]:./worker
+		links:
+			- redis
+			- db
+
+After running of the command docker compose up 
+
+Docker-compose.yml version 2:
+	-	all running docker containers can be included in services,
+	- there is dedicated bridged network for the docker, so it is no longer needed the link part
+
+docker-compose.yml version 2:
+	version: 2
+	services:
+		redis:
+			image: redis
+			networks:
+				- back-end
+		db:
+			image: postgres:9.4
+			environment:
+				POSTGRESS_USER:	postgres
+				POSTGRESS_PASSWORD: postgres
+			networks:
+				- back-end
+		vote:
+			image: voting-app		![or build]:./vote 		-- we can specify path from where we can build our app if it's not on docker registry
+			ports:
+				- 5000:80
+			depends_on:
+				- redis
+			networks:
+				- front-end
+				- back-end
+		result:
+			image: result-app		[or build]:./result
+			ports:
+				- 5001:80
+			networks:
+				- front-end
+				- back-end
+		worker:
+			image: worker			[or build]:./worker
+	
+	networks:
+		- front-end
+		- back-end
+
+Docker-compose.yml version 3:
+	-	has support of the Docker Swarm 
+	- other changes that will be stated later
+	
+Networking can be added in the .yml file as in the example and can consists of dedicated network for the docker-compose networking settings
+
+Docker Engine, Storage
+------------------------------
+Docker Engine consist of the following components:
+- Docker Daemon		-- background process, that managages Docker objects such as the images, containers, volumes and networks
+- Docker REST API 	-- the API interface that programs can use to talk to the deamon and provide instructions
+- Docker CLI 		-- Command line interface, that we use to perform actions such as running, stopping container and etc.
+!Docker CLI can be run on remote host and still interact with REST API and Docker deamon, but you have to specify to which remote-docker engine is performed:
+Ex.!: docker -H=[remote-docker-engine:port] [command] [docker image/ID] 
+
+Docker containers has the CONTAINERIZATION PROCESS wher the Docker uses NAMESPACE.
+The Namespace isolates the different components of the host and uses them to run the container images:
+	- Process ID
+	- Mount
+	- InterProcess
+	- Network
+	- Unix TimeSharing
+	
+Namespaces are good for separate and hence pointing Process ID for both the container and the OS
+OS and the container shares the same PIDs, but because of the namespaces they are different.
+You can still limit the resources that are reserved by the docker containers:
+Ex.!
+docker run --cpus=.5 ubuntu 		-- runs docker container ubuntu that CAN use up to 50% of the CPU
+docker run --memory=100m ubuntu 	-- runs docker container ubuntu that uses up to 100mb of RAM on OS
+
+STORAGE
+When you download docker, it stores its data and dependancies in 
+	/var/lib/docker
+		- aufs
+		- containers
+		- images
+		- volumes
+		
+!!!Mounting volumes on docker to store data:
+Ex. 
+	docker volume create data_volume		-- creates folder "data_volume" in /var/lib/docker/data_volume
+	docker run -v data_volume:/var/lib/mysql mysql 		-- mounts the volume from the hosts hard drive to the container mysql data so it can be stored
+!if we just only run with mount some volume, Docker will automatically create that volume and mount it to the data
+	docker run -v data_volume2:/var/lib/mysql mysql		-- creates data_volume2 and mount it to the docker mysql folder	
+These are 2 mounts:
+	- volume mount		-- attaches volume to the docker from /var/lib/docker/[folder]
+	- bind mount 		-- attaches folder from any location to the docker container
+docker run --mount type=bind,source=/data/mysql, target=/var/lib/mysql mysql 		-- verbose way to bind a folder
+
+Docker uses the following storage drivers:
+	-AUFS
+	-ZFS
+	-BTRFS
+	-Device Mapper
+	-Overlay
+	-Overlay2
+
+Docker Network
+------------------------------
+Docker creates 3 default networks:
+	- bridge		-- internal network, created by docker, usually 172.17.0.1(gateway)
+	- none 			-- isolated network
+	- host 			-- when used docker uses the hosts network to work
+
+we can create separated BRIDGE network with the following cmd:
+	dockwer network create --driver bridge --subnet 182.18.0.0/16 custom-isolated-network 		-- creates a bridged network with the specified CIDR range and name 
+
+List all networks:
+docker network ls 		
+docker inspect 		-- will provide docker image network settings
+
+Docker has embedded DNS, which allows Docker to address it's container by name, not by IP
+By default the DNS server is running on IP 127.0.0.11
+
+Docker Registry
+------------------------------
+If we pull out image by nginx this is what happens:
+
+image: docker.io	/	nginx	/	nginx
+		registry 	 User/account   image/repository
+		
+docker login private-registry.io
+
+Deploy private registry
+#run a registry container which is exposed to port 5000
+docker run -d -p 5000:5000 --name registry registry:2
+#tag the image with a name to the registry 
+docker image tag my-image localhost:5000
+#push the image to the registry
+docker push localhost:5000/my-image
+#if you want to pull your image 
+docker pull localhost:5000/my-image
+
+Docker for Windows & Mac
+------------------------------
+Docker toolbox		-- consist of working solution from Docker that has everything build in toolbox to run docker on Windows
+Desktop Docker 
+
+Docker Swarm 
+------------------------------
+Docker Swarm is capable of running multiple docker hosts for high availability and load balancing
+
+Setup Swarm 
+There is ONE SWARM Manager and other hosts are workers
+#On docker Swarm Manager:
+docker swarm init			-- run swarm and it provides the token to be provided for the workers to join
+#On Node worker:
+docker swarm join --token <token from docker Swarm manager>			-- docker worker to join the docker Swarm
+
+The thing that provides the orchestration on the Docker is the Docker service.
+#The docker service should be run on the Docker Swarm Manager and not on the worker node:
+	docker service create --replicas=3 my-web-server
+
+Kubernetes introduction
+------------------------------
+Kubernetes Components:
+-  API server		-- front end of the Kuberbetes service
+-  Scheduler		-- distributing the work over all nodes, looks for newly created containers and assign them to nodes
+-  Controller		--	responsible for seeking any not working nodes/containers, shutting them down and restarts them up 
+-  etcd				-- used to store all the data needed for the kubernetes cluster, containing logs
+-  kubelet			-- agent that runs on each node in the cluster, making sure that the containers is running on the nodes as expected  
+-  container runtime 	-- the underline software that is used to run containers
+
+kubectl run [app]		-- runs an application
+kubectl cluster-info 	-- shows information about the cluster
+kubectl get nodes 		-- used to list all of the nodes that are part of a cluster
+
+kubectl run my-web-app --image=my-web-app --replicas=100	-- run an application that has 100 replicas in the kubernetes
+-- this will append new command toward the entrypoint
 ex. docker run --entrypoint sleep2.0 ubuntu-sleeper 10
