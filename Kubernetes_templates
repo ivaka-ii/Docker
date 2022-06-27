@@ -1,0 +1,390 @@
+========================================
+=Kubernetes templates				           =
+========================================
+
+apiVersion: v1	(string)
+kind: Pod		(string)
+metadata:		(dictionary)
+  name: 
+  labels:
+    
+	type: 
+	tier: 
+spec:			(dictionary)
+
+
+Creating pod from YAML
+----------------------------------------
+vim pod.yaml
+
+apiVersion: v1	(string)
+kind: Pod		(string)
+metadata:		(dictionary)
+  name: myapp-pod
+  labels:
+    app: myapp
+	type: front-end
+	tier: frontend
+spec:			(dictionary)
+  containers:		(list/array)
+  - name: nginx-container
+    image: nginx
+	
+kubectl apply -f pod.yaml		-- applies the created pod from yaml file
+kubectl create -f pod-definition.yml
+
+kubectl get pods 				-- check for created pod
+
+kubectl describe pod nginx 		-- gives in-debt information about the pod
+
+
+Creating ReplicationController from yml
+------------------------------------------
+vim rc-definition.yml
+
+apiVersion: v1	
+kind: ReplicationController
+metadata:
+  name: myapp-rc
+  labels:
+    app: myapp
+	type: front-end
+	tier: 
+spec:
+  template:
+    metadata:
+	  name: myapp-pod
+	  labels:
+		app: myapp
+		type: front-end
+		tier: frontend
+	spec:			
+	  containers:
+	  - name: nginx-container
+		image: nginx
+  replicas: 3
+  
+kubectl create -f rc-definition.yml 	-- creates the replica from yml
+
+kubectl get replicacontroller			-- gets the information about the replication controller 
+
+kubectl get pod 						-- checks the state of the running pods 
+
+
+Creating Replica set from yml
+------------------------------------------
+vim replicaset-definition.yml
+
+apiVersion: apps/v1	
+kind: ReplicaSet
+metadata:
+  name: myapp-replicaset
+  labels:
+    app: myapp
+	type: front-end
+spec:
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+        type: front-end
+        tier: frontend
+    spec:			
+	  containers:
+      - name: nginx-container
+        image: nginx
+  replicas: 3
+  selector:
+    matchLabels:
+	  type: front-end
+	  
+kubectl create -f replicaset-definition.yml
+
+kubectl get replicaset
+
+kubectl get pods
+
+Deployment yml
+------------------------------------------
+apiVersion: apps/v1	
+kind: Deployment
+metadata:
+  name: myapp-deployment
+  labels:
+    app: myapp
+	type: front-end
+spec:
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+        type: front-end
+        tier: frontend
+    spec:			
+	  containers:
+      - name: nginx-container
+        image: nginx
+  replicas: 3
+  selector:
+    matchLabels:
+	  type: front-end
+
+kubectl create -f deployment-definition.yml 
+
+kubectl get deployments
+
+kubectl get replicaset
+
+kubectl get pods
+
+
+service-definition yml NodePort
+------------------------------------------
+apiVersion: v1	
+kind: Service
+metadata:
+  name: myapp-service
+  
+spec:
+  type: NodePort
+  ports:
+	- targetPort: 80
+	  port: 80 (mandatory)
+	  nodePort: 30008 (if not provided it will automatically allocate in the port range of 30000 - 32767)
+  selector:	(provide labels from the POD-definition app)
+    app: myapp
+	type: front-end
+!We can have multiple port mappings within one service 
+
+kubectl create -f service-definition.yml 		-- service myapp-service is created
+
+kubectl get services 			-- shows service list
+
+
+service-definition yml ClusterIP
+------------------------------------------
+apiVersion: v1	
+kind: Service
+metadata:
+  name: back-end
+  
+spec:
+  type: ClusterIP
+  ports:
+	- targetPort: 80
+	  port: 80 (mandatory)
+	  
+  selector:	(provide labels from the POD-definition app)
+    app: myapp
+	type: back-end
+	
+kubectl create -f service-definition.yml 		-- service back-end is created
+
+kubectl get services 			-- shows service list
+
+
+service-definition yml LoadBalancer
+------------------------------------------
+apiVersion: v1	
+kind: Service
+metadata:
+  name: myapp-service
+  
+spec:
+  type: LoadBalancer
+  ports:
+	- targetPort: 80
+	  port: 80 (mandatory)
+	  nodePort: 30008
+	
+kubectl create -f service-definition.yml 		-- service back-end is created
+
+kubectl get services 			-- shows service list
+
+
+Namespaces
+===========================================
+vim pod-definition.yml
+
+apiVersion: v1	
+kind: Pod		
+metadata:		
+  name: myapp-pod
+  namespace: dev
+  labels:
+    app: myapp
+	type: front-end
+
+spec:			
+  containers:		
+  - name: nginx-container
+    image: nginx
+	
+kubectl create -f pod-definition.yml 	-- creates pod from file in namespace "dev"
+
+--------------------------------------------
+vim namespace-dev.yml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+ 
+kubectl create -f namespace-dev.yml 		-- creates namespace "dev"
+
+--------------------------------------------
+vim compute-quota.yaml
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: dev
+
+spec:
+  hard:
+    pods: "10"
+	requests.cpu: "4"
+	requests.memory: 5Gi
+	limits.cpu: "10"
+	limits.memory: 10Gi
+	
+kubectl create -f compute-cuota.yml 
+
+
+Imperative Object configuration files 
+===============================================
+Create object
+-----------------------------------------------
+kubectl create -f nginx.yaml
+
+Update object
+-----------------------------------------------
+kubectl edit deployment nginx 		-- edits the conf file of nginx to Kubernetes memory
+
+kubectl replace -f nginx.yaml		-- replaces the nginx config file
+
+kubectl replace --force -f nginx.yaml	--forcefully replaces the config file
+
+kubectl create -f nginx 		-- if config file is once replaced, now it would give an error
+
+
+Declarative Object configuration files 
+===============================================
+Create object
+----------------------------------------------
+kubectl apply -f nginx.yaml 		-- kubectl APLIES what it is within the config file
+
+kubectl apply -f /path/to/config-files 	-- changes the path where the kubectl creates objects
+
+Update object
+-----------------------------------------------
+when there is update in the config file you would once again run 
+
+kubectl apply -f nginx.yaml 	-- kubectl only updates declaratively whats made in the config file
+
+
+Taints and tolerations
+=================================================
+tolerations:
+  - key: spray
+    value: mortein
+    effect: NoSchedule
+    operator: Equal
+	
+
+Node Selectors 
+-------------------------------------------
+Under specs in POD we can add:
+
+ nodeSelector:
+   size: Large
+
+that how we identify to which label's node our POD will go
+
+
+Node Affinity
+--------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+
+
+Resource Requirements and limits 
+--------------------------------------------
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+spec:
+  limits:
+  - default:
+      memory: 512Mi
+    defaultRequest:
+      memory: 256Mi
+    type: Container
+
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-limit-range
+spec:
+  limits:
+  - default:
+      cpu: 1
+    defaultRequest:
+      cpu: 0.5
+    type: Container
+	
+Daemon sets template
+=============================================
+apiVersion: apps/v1	
+kind: DaemonSet
+metadata:
+  name: monitoring-daemon
+spec:
+  selector:
+    matchLabels:
+	  app: monitoring-daemon
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: monitoring-daemon
+    spec:			
+	  containers:
+      - name: monitoring-agent
+        image: monitoring-agent
+		
+kubectl create -f daemon-set-definition.yaml
+
+kubectl get daemonsets 
+
+kubectl describe daemonsets <name of the daemonset>
