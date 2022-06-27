@@ -10,7 +10,39 @@ Master Node			-- Manage, plan, schedule monitor nodes
 Master node contains control plane components
 
 All information from control plane is stored in ETCD cluster
+ETCD is a database that stores information in a key-value format
 
+!!!Everything in Kubernetes is in a form of a container, so we need Container Runtime engine
+	
+
+Within Kubernetes everything should be container based or compatible, so in this manner we need 
+docker container runtime engine (docker or rkt container)
+
+Kube-proxy 		-- service that ensures the reachability withtin the different working nodes components
+
+ETCD
+------------------------------------------
+ETCD is a distributed key-value store that is Simple, Secure & Fast
+
+key-value database has only two colums, consist of key and value 
+!You cannot have duplicate keys as such.
+Used to store small chunks of data for read/write for reading configuration and etc.
+
+Every setting in the kubernetes cluster is stored in ETCD cluster. Once something in settings is changed
+in ETCD, then it is considered to be a full change 
+
+!!! --advertise-client-urls https://${INTERNAL_IP}:2379		--the default port that ETCD listens 
+!!! This is the URL that has to be configured in order to access the ETCD cluster
+
+ETCD CMDS -> see K8s useful cmds
+
+
+Kube-apiserver
+---------------------------------------
+The component that connects all the kubernetes components into one it gives the users API calls to the components withtin the architecture.
+It retrieves the data from the ETCD cluster from the key-value and renspons back to the user
+				
+				
 Kubernettes Controller Manager
 ---------------------------------------
 It can be downloaded and run as a service
@@ -26,24 +58,8 @@ Main 2 activities:
 
 There are different other controlers, which is installed once you install the K8s controller manager.
 When installed  all the controlers are available, but their settings(time & etc.) are default.
-If SOME of your controllers don't work, this is a good starting point to look at.
+If SOME of your controllers don't work, this is a good starting point to look at.			
 	
-Kube-apiserver		-- the component that connects all the kubernetes components into one
-					it gives the users API calls to the components withtin the architecture
-
-Within Kubernetes everything should be container based or compatible, so in this manner we need 
-docker container runtime engine (docker or rkt container)
-
-Kube-proxy 		-- service that ensures the reachability withtin the different working nodes components
-
-ETCD
-------------------------------------------
-ETCD is a distributed key-value store that is Simple, Secure & Fast
-
-key-value database has only two colums, consist of key and value 
-!You cannot have duplicate keys as such.
-Used to store small chunks of data for read/write for reading configuration and etc.
-
 Kube scheduler
 ---------------------------------------
 Kube scheduler 		-- represents the docker uploader to the different working nodes based on it's size and capabilities
@@ -57,6 +73,10 @@ Actually what it is doing is:
 	
 We should download the kube shceduler and run it as a service
 
+Scheduler looks for PODs that do not have a nodeName property set in the specs.
+If there is such a POD, scheduler assign it to the appropriate node by binding object
+
+
 Kubelet
 ---------------------------------------
 Kubelet is listening for instructions from the kube api-server
@@ -66,10 +86,12 @@ This is the "captain" of the node and it waits the instructions.
 The kubelet registers what has to be pulled out through the kube-apiserver and the kube-scheduler.
 then it is pulling the required image and runs the instance. 
 !If you use kubeadm tool to deploy  your cluster, it does not automatically deploy the kubelet
-! You MUST ALWAYS INSTALL the kubelet on your worker nodes:
+! You MUST ALWAYS MANUALLY INSTALL the kubelet on your worker nodes:
 	1. Download the installer
 	2. Extract it
 	3. Run it as a service
+	
+!Kubeadm does not deploy Kubelets 
 	
 Kube-proxy
 ---------------------------------------
@@ -78,7 +100,7 @@ It gives the network availability of evry POD to connect to every POD
 !A POD can't have exactly the same IP always, so we can register the service with its own IP, so it can be connected
 !The service IP is not a real component, it is only living withing the kubernetes memory
 
-Kube-Proxy is a service that runs on each node in the kubernetes cluster
+Kube-Proxy is a process that runs on each node in the kubernetes cluster
 Main job is to search for new services and each time new service is created, it creates the appropriate rule to connect to the service
 It is using IP TABLES rules, so it creates IPtable rules within each node to connect to the node that is running the requested service
 
@@ -90,7 +112,7 @@ We will assume that:
 2. The Kubernetes cluster has been setted up and working
 
 POD		-- Single instance of an application 
-POD is the smallest thing you can create in Kubernetes
+POD is the smallest object you can create in Kubernetes
 
 To scale up - we create new PODs, to scale down - delete the POD. If a Node has insufficient resources for POD, we can always deploy new Node.
 !You do not add additional containers to an existing POD to scale your application 
@@ -103,14 +125,194 @@ APP			Helper 			Volume
 Python1		App1			Vol1
 Python2		App2			Vol2
 
+PODs with YAML
+--------------------------------------------------------
+Kubernetes uses YAML files for the creation of objects such as PODs, replicas, deployments, services.
+YAML files has the following structure:
+Ex. of pod-definition.yml
+  apiVersion: v1	(string)
+  kind: Pod		(string)
+  metadata:		(dictionary)
+    name: myapp-pod
+    labels:
+	  app: myapp
+      type: front-end
+    spec:			(dictionary)
+      containers:		(list/array)
+      - name: nginx-container
+        image: nginx
 
-Replication-controller
+!after creating such a yaml definition file, we can execute 
+kubectl create -f pod-definition.yml
+
+
+Replication-controller & Replica set
 ---------------------------------------------------------
+Replication-controller ensures that the specified number of pods are running
 it is responsible for how many replica's is needed on demand and running
 Replication controler helps running more pods on single node to have high availability
 !replication controler CAN even help when there is only ONE pod on the node
 
-Replication controller is responsible for Load Balancing & scaling.
-There are 2 meaning here replication controler & replica set
+Replication controller is responsible for Load Balancing & scaling. It can span even across another nodes as it is required
+There are 2 meaning here replication controler & replica set,
+whereas replication controller is the older version or technology and replica set is the reccomended one
 
 We should always label our replicaset file as this will show us which part of the pods should be replaced
+
+Selector is the main difference between replica set and replication controller
+
+Labels and Selectors
+	Replica sets knows which pods to oversee by their labeling configuration
+	
+
+Deployments
+----------------------------------------------------------
+Deployments are used as Replica set, but now we are using different deployment for different environments.
+Deployments are up than replica sets and they can allow us to have rolling updates, undo changes and resume changes as required
+
+
+Services
+----------------------------------------------------------
+Kubernetes services enable communication between various components within and outside of the application.
+KS allows us to connect application together with other applications and users.
+We can have group of services that are running front-end, another for back-end, another is connecting external data sources.
+KS enables loose coupling between micro services in our application.
+The main purpose of the service is to listen to a specific port on the NODE and forwards the requests to the POD in the node.
+
+Service types:
+	NodePort 		-- the service that makes an internal POD accessible on a Port on the Node (see figure Service NodePort)
+	------------------------------------------------------------------------------------------
+		- consists of the following elements:
+			1.Target port 	-- the port that is opened from the POD(from serveice perspective)
+			2. Port 		-- The service's listening port, which has its own IP in the node
+			3. NodePort 	-- Node port is the port for the service to forward the requests.
+			!NodePort default range of ports are from 30000 - 32767
+	! if Service finds multiple PODs with the same label, it automatically forwards the user's request to all off them with
+	Algorithm: Random Session Affinity:Yes (as build-in load balancer to distribute all traffic across all PODs)
+	!! if PODs are allocated among different Nodes, once we create again the same service, it SPANS automatically through all Nodes
+	!! if the PODs or Nodes are removed, the service is automatically updated with the new settings
+	
+	Cluster IP 		-- This service creates a virtual IP inside the cluster to enable communication between different servers(ex. set of front end servers to set of backend servers)
+	------------------------------------------------------------------------------------------
+		This service allows of creation of the single interface that allows all the IPs of a group of PODs to be combined into one IP
+		
+
+	LoadBalancer 	-- The service provisions load balancer for our service in supported cloud providers.(Ex. to distribute the load of the requests among the front end servers)
+	------------------------------------------------------------------------------------------
+		This is the service that forwards traffic to the different Nodes in order for the PODs to be accessible to just one IP.
+		Different cloud providers has native load balancers that can be used. Without cloud platform we can build our own Load Banacer through all the services available.
+
+
+Namespaces
+----------------------------------------------------------
+By default Kubernetes creates all its resources in the default namespace. 
+Kubernetes creates automatically other namespaces such as kube-system and 
+the namespace that has access to the user - kube-public, whereas all the resources created by the cluster is accessible to the users.
+
+Different namespaces isolates the resources between each of them. Each of the namespaces has its own policies that provide which component do what.
+!! if we want to refer the connection to a service WITHIN a namespace, we can do that by simply calling it by its name(mysql.connect("db-service"))
+!! if we want to connect a service from the default namespace to other namespace we can refer a connection as follows:(mysql.connect("db-service.        dev.     svc.     cluster.local"))
+																																	  Service name    Namespace  Service     domain
+You can include the namespace definition into the yml file by adding the data into the metadata section with "namespace:"
+
+to define the resources for one namespace we can create resource quote for that namespace (see templates for quota) 																																
+
+
+Imperative vs Declarative 
+----------------------------------------------------------
+!!!IMPORTANT!!!
+When you edit a configuration file in Kubernetes memory with example new version of the image for the running pods,
+then if you change the configuration file of the deployment config file, when you apply the config file of the deployment,
+the newest image will be lost(and the previous image will be restored)
+Best practice is to edit and save settings to the configuration file of the deployment!
+The only case of updating the image of the pods is whereas you don't consider to use the deployment file of the cluster anymore
+
+
+--dry-run: By default as soon as the command is run, the resource will be created. If you simply want to test your command , 
+use the --dry-run=client option. This will not create the resource, instead, tell you whether the resource can be created and if your command is right.
+
+-o yaml: This will output the resource definition in YAML format on screen.
+
+!Use the above two in combination to generate a resource definition file quickly, that you can then modify and create resources as required, 
+instead of creating the files from scratch.
+
+
+Labels & Selectors 
+----------------------------------------------------------
+All the Pods, replicas, deployment and etc., are objects for kubernetes
+
+Under the metadata of the config file you can create section labels and assign the conditions
+
+Annotations are used for another informational use cases (buildversion, contacts and etc.)
+
+Taints and tolerations
+----------------------------------------------------------
+Taints are placed to nodes 	-- this is the parameter which restrict a node to accept any kind of node, but those who have the tolerations to the taint
+
+Tolerance			-- this is the parameter to be set on the PODs in order to have them on a specific node if it required
+!Example (We could want all the services from a specific environments to be specified in a specific node)
+
+kubectl taint nodes <node-name key=value:taint-effect>
+Ex.! kubectl taint nodes node1 app=blue:NoSchedule 		-- add a "blue" taint for node
+
+for PODs the toleration must be added under "specs" in the config file
+!The tolerations should always be in quotes("")
+
+
+Node Selectors 
+-------------------------------------------
+Node selector is nothing but a label on the node that we could include in the pod config files
+
+kubectl label nodes <node-name> <label-key>=<label-value>
+Ex.! lubectl label nodes node-1 size=Large
+
+Under specs in POD we can add:
+
+ nodeSelector:
+   size: Large
+
+that how we identify to which label's node our POD will go
+
+
+Node Affinity
+-------------------------------------------
+
+
+Resource requirements and Limits
+-------------------------------------------
+Again the scheduler is responsible for placing the nodes in the corresponding node.
+Node is taken with his resources and if there is a POD that can't be in exact node, it will not be placed in the node and it will 
+be in pending state.
+
+By default minimum resource requirements in the Node, or "block" are:
+CPU - 0.5
+MEM - 256 MiB
+
+these values can be specified in the POD definition file under spec/container/resources/requests
+
+CPU 	-- 1 stands for 1 core of CPU and it is basically corresponds to 1 core of the cloud providers
+MEM		-- 1 G(gigabyte), 1 Gi(Gibibyte)
+
+!!!By default k8s sets a limit of one CPU to containers and by default it assigns 512Mi of memory
+You can specify values of limits in the POD definition file under spec/container/resources/limits
+!if a container exceeds the CPU limit, the cluster does NOT allow any more CPU usage and CPU will trottle,
+if a container exceeds memory constantly -- it the node will terminate the POD
+
+!!!For the POD to pick up those defaults you must have first set those as default values for request 
+and limit by creating a LimitRange in that namespace.  --> see K8s templates
+
+
+DaemonSets
+-------------------------------------------
+Daemon sets are like replica sets, as it helps you deploy multiple instances of pot, but it runs ONE copy
+of your pod on each node in the cluster.
+When a new node is added to the cluster, a replica of the pod is automatically added to that node.
+When a node is removed, the pod is also removed.
+The daemon sets ensures that there is one copy of it in every node in the cluster.
+This makes Daemon sets a perfect use case for deploying agents for Monitoring solution and Logs viewer.
+
+!Kube-proxy could be deployed as a deamon set as it is required component for a nodes in the cluster.
+!Another use case can be networking agent that should be deployed on each node.
+
+Deamen set configuration file --> see templates 
+
