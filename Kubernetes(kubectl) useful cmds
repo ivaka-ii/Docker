@@ -1,12 +1,36 @@
 Kubernetes GOOD to know CMDS
 ========================================
 
+ETCDCTL Utility
+----------------------------------------
+ETCDCTL is the CLI tool used to interact with ETCD.
+
+ETCDCTL version 2:
+etcdctl backup
+etcdctl cluster-health
+etcdctl mk
+etcdctl mkdir
+etcdctl set
+
+ETCDCTL version 3:
+etcdctl snapshot save 
+etcdctl endpoint health
+etcdctl get
+etcdctl put
+
+export ETCDCTL_API=2/3		-- set the right version of API set the environment variable ETCDCTL_API command (2 is by default)
+
+
 Controller manager cmds
 ----------------------------------------
-kubectl get pods -n kube-system		-- view kube-controller-manager
+kubectl get pods -n kube-system									-- view kube-controller-manager
+
 cat /etc/kubernetes/manifests/kube-controller-manager.yaml		-- view settings of the kube controller manager
+
 cat /etc/systemd/system/kube-controller-manager.service			-- shows controller manager service settings
+
 ps -aux | grep kube-controller-manager							-- shows also additional kubernetes settings
+
 
 Kube scheduler cmds
 ----------------------------------------
@@ -25,11 +49,14 @@ kubectl get daemon -n kube-system		-- shows the running daemon (kube-proxy)
 
 Create PODs
 ----------------------------------------
-kubectl run <pod_name> --image nginx			-- downloads and installs nginx from dockerhub
+kubectl run <pod_name> --image nginx			-- creates POD in the node automatically, downloads, installs and runs nginx from dockerhub
+!Ex. kubectl run nginx --image=nginx			-- creates pod with nginx name and with image nginx
+
+kubectl run nginx --image=nginx --dry-run=client -o yaml		-- Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
 kubectl get pods						-- shows list of pods
 kubectl get pods -o wide				-- shows more detailed list of the pods and the node that are located on
 
-kubectl describe pod newpods-<pod_id>	-- describes the details of the pod 
+kubectl describe pod <pod_name>			-- describes the details of the pod 
 
 kubectl delete pod <pod_id>				-- deletes a pod
 
@@ -77,4 +104,112 @@ kubectl delete replicaset <name of replicaset>			-- deletes the replicaset def. 
 kubectl delete -f <replicaset file>			-- deletest the file of the replicaset 
 
 kubectl replace -f replicaset-definition.yml		-- replaces replicaset file 
-kubectl scale -replicas=6 -f replicaset 			--	changes the scale numbers of replicaset
+kubectl scale --replicas=6 -f replicaset-definition.yml			-- changes the scale numbers of replicaset
+kubectl scale --replicas=6 replicaset myapp-replicaset
+							type 		name 
+!With scale cmd the replica set number would remain the SAME in the file and won't be changed even we specify rescaling
+
+!!To see all the resources!!
+kubectl get all		-- lists all the resources of the kubernetes cluster
+
+Deployments
+===========================================
+kubectl create deployment --image=nginx nginx			-- creates deployment named nginx with image nginx
+
+kubectl create deployment --image=nginx --replicas=4 nginx --dry-run=client -o yaml > nginx-deployment.yaml		-- Generate Deployment YAML file (-o yaml). Don't create it(--dry-run) with 4 Replicas
+kubectl create -f nginx-deployment.yaml					-- then create the deployment
+
+kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml
+
+kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3  		-- creates deployment named httpd-frontend from image image=httpd:2.4 and 3 replicas
+
+Namespaces
+===========================================
+kubectl get pods --namespace=kube-system		-- lists all the pods within a namespace of "kube-system"
+
+kubectl create pod -f pod-definition.yml --namespace=dev 		-- creates a pod from file into the namespace "dev"
+
+kubectl create namespace dev 		-- creates namespace "dev"
+
+kubectl config set-context $(kubectl config current-context) --namespace=dev 		-- switches the default namespace into "dev"
+
+kubectl get pods --all-namespaces(-A)		-- lists the pods in all the namespaces
+
+Services
+===========================================
+kubectl describe service			-- describes services on kubernetes kluster
+
+kubectl get svc -n=[namespace]		-- shows available services in the kubernetes cluster within the selected namespace
+
+
+Imperative cmds
+===========================================
+Create objects
+-------------------------------------------
+kubectl run --image=nginx nginx
+
+kubectl create deployment --image=nginx nginx
+
+kubectl expose deployment nginx --port 80
+
+Update objects
+-------------------------------------------
+kubectl edit deployment nginx
+
+kubectl scale deployment nginx --replicas=5
+
+kubectl set image deployment nginx nginx=nginx:1.18
+
+
+USED Imperative CMDS
+--dry-run: By default as soon as the command is run, the resource will be created. If you simply want to test your command , 
+use the --dry-run=client option. This will not create the resource, instead, tell you whether the resource can be created and if your command is right.
+
+-o yaml: This will output the resource definition in YAML format on screen.
+
+!Use the above two in combination to generate a resource definition file quickly, that you can then modify and create resources as required, 
+instead of creating the files from scratch.
+
+kubectl create deployment nginx --image=nginx --dry-run=client -o yaml > nginx-deployment.yaml		-- creates nginx-deployment conf file
+
+kubectl expose pod redis --port=6379 --name redis-service --dry-run=client -o yaml  -- Create a Service named redis-service of type ClusterIP to expose pod redis on port 6379
+
+kubectl create service clusterip redis --tcp=6379:6379 --dry-run=client -o yaml 	
+
+kubectl expose pod nginx --type=NodePort --port=80 --name=nginx-service --dry-run=client -o yaml		-- Create a Service named nginx of type NodePort to expose pod nginx's port 80 on port 30080 on the nodes
+
+kubectl create service nodeport nginx --tcp=80:80 --node-port=30080 --dry-run=client -o yaml 		--Create a Service named nginx of type NodePort to expose pod nginx's port 80 on port 30080 on the nodes:
+
+either 
+kubectl run <pod> --image=<image>:<distribution> --port=80 --expose=true
+
+
+Labels & Selectors
+-------------------------------------------
+kubectl get pods --selector env=dev | wc -l 			-- shows how many rows are listed in the output
+kubectl get pods --selector env=dev --no-headers | wc -l  -- list how many pods (lanes) are in the output
+
+kubectl get all --selector env=prod,bu=finance,tier=frontend
+
+Taints and tolerations
+-------------------------------------------
+kubectl taint nodes <node-name key=value:taint-effect>			-- apply taint effect over node 
+
+kubectl taint nodes <node-name key=value:taint-effect>-  		-- to untaint the effect
+
+!to apply toleration, you should use the config file of a POD
+
+
+Node Selectors 
+-------------------------------------------
+kubectl label nodes <node-name> <label-key>=<label-value>
+Ex.! lubectl label nodes node-1 size=Large
+
+
+Daemon sets
+-------------------------------------------
+kubectl create -f daemon-set-definition.yaml
+
+kubectl get daemonsets 									-- lists present daemonsets
+
+kubectl describe daemonsets <name of the daemonset>			-- gets information about a daemonset
